@@ -156,8 +156,8 @@ table.list td.num{font-variant-numeric:tabular-nums;text-align:right}
 .feedback.good{color:var(--green)} .feedback.bad{color:var(--red)}
 .hint-btn{background:#ece5d6;border-radius:14px;padding:13px;font-weight:800;font-size:17px}
 .next-btn{background:var(--ink);color:#fff;border-radius:14px;padding:15px;font-weight:800;font-size:19px}
-.keypad{display:none;grid-template-columns:repeat(3,1fr);gap:8px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:10px}
-.keypad.show{display:grid;animation:pop .2s ease-out}
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:10px}
+.keypad.off{opacity:.45;pointer-events:none}
 .key{height:60px;border-radius:14px;background:#ece5d6;font-size:30px;font-weight:900;box-shadow:0 3px 0 #d6ccb8}
 .key:active{transform:translateY(2px);box-shadow:0 1px 0 #d6ccb8}
 .key.go{background:var(--green);color:#fff;box-shadow:0 3px 0 #215a3e}
@@ -956,8 +956,7 @@ function nextQuestion(){
   $("hintBtn").classList.remove("hidden");
   setFeedback("", "");
   clearBoard();
-  closeKeypad();
-  renderAnswer();
+  readyKeypad();
   renderDots();
   setupTimer();
   startTimer();
@@ -970,7 +969,7 @@ function renderDots(){
 function renderAnswer(){
   const box = $("answerBox");
   box.innerHTML = G.input ? `<span>${G.input}</span><span class="caret"></span>`
-    : (box.classList.contains("focus") ? '<span class="caret"></span>' : '<span class="ph">Tap to type your answer</span>');
+    : (box.classList.contains("focus") ? '<span class="caret"></span>' : '<span class="ph">Type your answer</span>');
 }
 function setFeedback(text, cls){ const f = $("feedback"); f.textContent = text; f.className = "feedback " + cls; }
 function plainQ(){
@@ -981,9 +980,9 @@ function plainQ(){
 function recordMiss(){ G.misses.push({ q:plainQ(), a:G.cur.answer }); }
 
 /* ----- Keypad ----- */
-function openKeypad(){ if (G.locked) return; $("keypad").classList.add("show"); $("answerBox").classList.add("focus"); renderAnswer(); }
-function closeKeypad(){ $("keypad").classList.remove("show"); $("answerBox").classList.remove("focus", "right", "wrong"); renderAnswer(); }
-$("answerBox").onclick = openKeypad;
+// The answer box and keypad stay on screen, ready to type, for every question
+function readyKeypad(){ $("keypad").classList.remove("off"); $("answerBox").classList.remove("right", "wrong"); $("answerBox").classList.add("focus"); renderAnswer(); }
+function lockKeypad(){ $("keypad").classList.add("off"); $("answerBox").classList.remove("focus"); }
 $("keypad").onclick = e => { const k = e.target.closest(".key"); if (k) press(k.dataset.k); };
 function press(k){
   if (G.locked) return;
@@ -995,7 +994,7 @@ function press(k){
 }
 document.addEventListener("keydown", e => {
   if (!$("play").classList.contains("active") || $("endOverlay").classList.contains("show")) return;
-  if (/^[0-9]$/.test(e.key)) { e.preventDefault(); openKeypad(); press(e.key); }
+  if (/^[0-9]$/.test(e.key)) { e.preventDefault(); press(e.key); }
   else if (e.key === "Backspace") { e.preventDefault(); press("del"); }
   else if (e.key === "Enter") { e.preventDefault(); if (!$("nextBtn").classList.contains("hidden")) $("nextBtn").click(); else press("go"); }
 });
@@ -1011,8 +1010,7 @@ function check(){
     G.results[G.i] = first ? "good" : "ok";
     if (!first) recordMiss();
     if (blank) { blank.textContent = G.cur.answer; blank.classList.add("solved"); }
-    box.classList.add("right");
-    $("keypad").classList.remove("show");
+    lockKeypad(); box.classList.add("right");
     setFeedback(pick(PRAISE), "good");
     renderDots();
     setTimeout(() => { G.i++; nextQuestion(); }, 1300);
@@ -1031,7 +1029,7 @@ function reveal(msg){
   const blank = $("question").querySelector(".blank");
   if (blank) { blank.textContent = G.cur.answer; blank.classList.add("revealed"); }
   else $("answerBox").innerHTML = `<span style="color:var(--red)">${G.cur.answer}</span>`;
-  $("keypad").classList.remove("show"); $("answerBox").classList.remove("focus");
+  lockKeypad();
   setFeedback(msg, "bad");
   showTip(true);
   renderDots();
