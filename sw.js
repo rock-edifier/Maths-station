@@ -1,6 +1,6 @@
 // Maths Station offline support.
 // Change VERSION whenever you upload a new index.html so iPads pick up the update.
-const VERSION = "maths-station-v2.1";
+const VERSION = "maths-station-v2.2";
 const FILES = [
   "./",
   "./index.html",
@@ -12,7 +12,8 @@ const FILES = [
 ];
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
+  // Save each file separately, so one missing file (e.g. an icon) doesn't stop the rest working offline
+  e.waitUntil(caches.open(VERSION).then(c => Promise.all(FILES.map(f => c.add(f).catch(() => {})))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", e => {
